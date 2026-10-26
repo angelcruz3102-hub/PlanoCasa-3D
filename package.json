@@ -1,0 +1,25 @@
+{
+  "name": "planocasa3d",
+  "version": "1.0.0",
+  "description": "PlanoCasa 3D — Diseño de planos 2D y modelo 3D navegable offline para Android",
+  "type": "module",
+  "private": true,
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "vendor": "node scripts/vendor-three.mjs",
+    "test": "node --test tests/",
+    "dev": "node scripts/dev-server.mjs",
+    "sync": "npm run vendor && cap sync android"
+  },
+  "dependencies": {
+    "three": "~0.186.0",
+    "@capacitor/core": "^8.0.0",
+    "@capacitor/android": "^8.0.0",
+    "@capacitor/app": "^8.0.0",
+    "@capacitor/filesystem": "^8.0.0",
+    "@capacitor/share": "^8.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.0.0"
+  }
+}
