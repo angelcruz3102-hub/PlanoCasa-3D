@@ -1,14 +1,7 @@
 // === www/js/main.js ===
 import * as THREE from 'three';
 
-// El WebView nativo inyecta window.Capacitor.
-// En navegador (desarrollo) no existe, por lo que ofrecemos un mock vacío.
-const Capacitor = globalThis.Capacitor ?? {
-  isNativePlatform: () => false,
-  Plugins: {},
-};
-
-// Acceso a los plugins a través del bridge global.
+const Capacitor = globalThis.Capacitor ?? { isNativePlatform: () => false, Plugins: {} };
 const App = Capacitor.Plugins?.App;
 const Filesystem = Capacitor.Plugins?.Filesystem;
 const Share = Capacitor.Plugins?.Share;
@@ -57,15 +50,9 @@ async function bootstrap() {
   const renderer2d = new Renderer2D();
 
   const tools = {
-    lot: new LotTool(store, view),
-    street: new StreetTool(store, view),
-    gallery: new GalleryTool(store, view),
-    perimeter: new PerimeterTool(store, view),
-    wall: new WallTool(store, view),
-    door: new OpeningTool(store, view),
-    window: new OpeningTool(store, view),
-    label: new RoomLabelTool(store, view),
-    stair: new StairTool(store, view),
+    lot: new LotTool(store, view), street: new StreetTool(store, view), gallery: new GalleryTool(store, view),
+    perimeter: new PerimeterTool(store, view), wall: new WallTool(store, view), door: new OpeningTool(store, view),
+    window: new OpeningTool(store, view), label: new RoomLabelTool(store, view), stair: new StairTool(store, view),
     select: new SelectTool(store, view),
   };
   let activeTool = tools.select;
@@ -81,7 +68,12 @@ async function bootstrap() {
     updateUndoRedo();
   });
 
-  // ---------------- Visor 3D ----------------
+  // Monitor de toques para confirmar que el lienzo recibe eventos
+  window.addEventListener('pointerdown', (e) => {
+    const hud = document.getElementById('canvas-hud');
+    if (hud && e.target === canvas) hud.textContent = `Tap en lienzo: X=${Math.round(e.clientX)}, Y=${Math.round(e.clientY)}`;
+  });
+
   let viewer = null;
   async function ensureViewer() {
     if (viewer) return viewer;
@@ -119,7 +111,6 @@ async function bootstrap() {
 
   function getModel() { return viewer?.sm.model ?? null; }
 
-  // ---------------- Fases ----------------
   function goToPhase(target) {
     if (target === store.ui.phase) return;
     const currentIndex = PHASES.indexOf(store.ui.phase);
@@ -159,10 +150,9 @@ async function bootstrap() {
     view.invalidate();
   }
 
-    function updatePhaseBanner() {
+  function updatePhaseBanner() {
     const banner = document.getElementById('phase-banner');
     const review = phasesNeedingReview(store.project);
-    
     const isEmpty = !store.project.site?.lot && Object.keys(store.project.levels[0]?.walls ?? {}).length === 0;
     const currentIndex = PHASES.indexOf(store.ui.phase);
     const relevant = review.filter(p => PHASES.indexOf(p) > currentIndex);
@@ -171,7 +161,6 @@ async function bootstrap() {
       banner.hidden = true;
       return;
     }
-    
     banner.hidden = false;
     banner.textContent = `Requiere revisión: ${relevant.join(', ')}`;
   }
@@ -181,25 +170,18 @@ async function bootstrap() {
     if (target.levelId) store.setActiveLevel(target.levelId);
     const level = store.getActiveLevel();
     if (!level) return;
-    if (target.kind === 'node' && level.nodes[target.id]) {
-      centerOn(level.nodes[target.id]);
-    } else if (target.kind === 'wall' && level.walls[target.id]) {
+    if (target.kind === 'node' && level.nodes[target.id]) centerOn(level.nodes[target.id]);
+    else if (target.kind === 'wall' && level.walls[target.id]) {
       const w = level.walls[target.id];
-      const a = level.nodes[w.a];
-      const b = level.nodes[w.b];
+      const a = level.nodes[w.a]; const b = level.nodes[w.b];
       if (a && b) centerOn({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
     } else if (target.kind === 'opening' && level.openings[target.id]) {
-      const o = level.openings[target.id];
-      const w = level.walls[o.wallId];
+      const o = level.openings[target.id]; const w = level.walls[o.wallId];
       if (w) {
-        const a = level.nodes[w.a];
-        const b = level.nodes[w.b];
+        const a = level.nodes[w.a]; const b = level.nodes[w.b];
         if (a && b) {
           const len = Math.hypot(b.x - a.x, b.y - a.y) || 1;
-          centerOn({
-            x: a.x + ((b.x - a.x) / len) * o.s,
-            y: a.y + ((b.y - a.y) / len) * o.s,
-          });
+          centerOn({ x: a.x + ((b.x - a.x) / len) * o.s, y: a.y + ((b.y - a.y) / len) * o.s });
         }
       }
     } else {
@@ -216,50 +198,21 @@ async function bootstrap() {
   function fitLevel(level) {
     const pts = Object.values(level.nodes);
     if (pts.length === 0) return;
-    const minX = Math.min(...pts.map((p) => p.x));
-    const maxX = Math.max(...pts.map((p) => p.x));
-    const minY = Math.min(...pts.map((p) => p.y));
-    const maxY = Math.max(...pts.map((p) => p.y));
+    const minX = Math.min(...pts.map((p) => p.x)); const maxX = Math.max(...pts.map((p) => p.x));
+    const minY = Math.min(...pts.map((p) => p.y)); const maxY = Math.max(...pts.map((p) => p.y));
     view.fitRect({ x: minX, y: minY, w: maxX - minX, h: maxY - minY }, 60);
   }
 
-  // ---------------- UI ----------------
-  const phaseStepper = new PhaseStepper(
-    document.getElementById('phase-stepper'),
-    store,
-    { onGoToPhase: goToPhase },
-  );
-  const toolbar = new Toolbar(
-    document.getElementById('toolbar'),
-    store,
-    { onToolChange: (name) => { if (activeTool?.deactivate) activeTool.deactivate(); activeTool = tools[name] ?? tools.select; activeTool.activate(); } },
-  );
-  const levelSwitcher = new LevelSwitcher(
-    document.getElementById('level-switcher'),
-    store,
-    { onCreateLevel: createSecondLevel },
-  );
-  const inspector = new Inspector(
-    document.getElementById('inspector'),
-    store,
-    {
-      onLoadSample: loadSample,
-      onExport: exportProject,
-      onImport: importProject,
-      onQuickView: quickView,
-      onViewModel: (mode) => applyViewMode(mode, getModel()),
-      getModel,
-    },
-  );
+  const phaseStepper = new PhaseStepper(document.getElementById('phase-stepper'), store, { onGoToPhase: goToPhase });
+  const toolbar = new Toolbar(document.getElementById('toolbar'), store, { onToolChange: (name) => { if (activeTool?.deactivate) activeTool.deactivate(); activeTool = tools[name] ?? tools.select; activeTool.activate(); } });
+  const levelSwitcher = new LevelSwitcher(document.getElementById('level-switcher'), store, { onCreateLevel: createSecondLevel });
+  const inspector = new Inspector(document.getElementById('inspector'), store, {
+    onLoadSample: loadSample, onExport: exportProject, onImport: importProject,
+    onQuickView: quickView, onViewModel: (mode) => applyViewMode(mode, getModel()), getModel,
+  });
 
-  document.getElementById('btn-undo').addEventListener('click', () => {
-    store.undo();
-    syncViewer();
-  });
-  document.getElementById('btn-redo').addEventListener('click', () => {
-    store.redo();
-    syncViewer();
-  });
+  document.getElementById('btn-undo').addEventListener('click', () => { store.undo(); syncViewer(); });
+  document.getElementById('btn-redo').addEventListener('click', () => { store.redo(); syncViewer(); });
   document.getElementById('btn-snaps').addEventListener('click', (e) => {
     const next = !store.ui.snaps.grid;
     store.setUi({ snaps: { ...store.ui.snaps, grid: next } });
@@ -276,31 +229,18 @@ async function bootstrap() {
     if (store.project.levels.length >= 2) return;
     const l1 = store.project.levels[0];
     const loop = l1.perimeterLoop.map((id) => l1.nodes[id]).filter(Boolean);
-    if (loop.length < 3) {
-      await alertDialog('Falta el perímetro', 'Define primero el perímetro de la planta baja.');
-      return;
-    }
+    if (loop.length < 3) { await alertDialog('Falta el perímetro', 'Define primero el perímetro de la planta baja.'); return; }
     replaceProject(store, (p) => {
       const l2 = createLevel({ id: 'L2', index: 1, name: 'Segunda planta' });
       const ids = [];
-      for (const pt of loop) {
-        const id = `m${ids.length + 1}`;
-        l2.nodes[id] = { id, x: pt.x, y: pt.y };
-        ids.push(id);
-      }
+      for (const pt of loop) { const id = `m${ids.length + 1}`; l2.nodes[id] = { id, x: pt.x, y: pt.y }; ids.push(id); }
       for (let i = 0; i < ids.length; i += 1) {
         const wid = `x${i + 1}`;
-        l2.walls[wid] = {
-          id: wid, a: ids[i], b: ids[(i + 1) % ids.length],
-          kind: 'exterior', thickness: p.settings.wallThickness.exterior,
-          height: p.settings.wallHeight,
-        };
+        l2.walls[wid] = { id: wid, a: ids[i], b: ids[(i + 1) % ids.length], kind: 'exterior', thickness: p.settings.wallThickness.exterior, height: p.settings.wallHeight };
       }
-      l2.perimeterLoop = ids;
-      p.levels.push(l2);
+      l2.perimeterLoop = ids; p.levels.push(l2);
     }, 'add-level-2');
-    store.setActiveLevel('L2');
-    showToast('Segunda planta creada');
+    store.setActiveLevel('L2'); showToast('Segunda planta creada');
   }
 
   async function quickView(name) {
@@ -308,125 +248,59 @@ async function bootstrap() {
     if (!v.sm.model) return;
     const box = new THREE.Box3().setFromObject(v.sm.model);
     if (box.isEmpty()) return;
-    const center = box.getCenter(new THREE.Vector3());
-    const size = box.getSize(new THREE.Vector3());
-    const radius = Math.max(size.x, size.y, size.z) * 0.5;
-    v.controls.quickView(name, center, radius);
+    const center = box.getCenter(new THREE.Vector3()); const size = box.getSize(new THREE.Vector3());
+    v.controls.quickView(name, center, Math.max(size.x, size.y, size.z) * 0.5);
   }
 
-  // ---------------- Persistencia ----------------
   async function saveProjectFile(project) {
     if (!isNative || !Filesystem) return;
-    try {
-      await Filesystem.writeFile({
-        path: 'planocasa-autosave.json',
-        data: JSON.stringify(project),
-        directory: Directory.Data,
-        encoding: Encoding.UTF8,
-      });
-    } catch (err) {
-      console.error('No se pudo guardar el proyecto:', err);
-    }
+    try { await Filesystem.writeFile({ path: 'planocasa-autosave.json', data: JSON.stringify(project), directory: Directory.Data, encoding: Encoding.UTF8 }); } catch (err) { console.error(err); }
   }
 
   async function loadInitialProject() {
     const local = loadLocal();
-    if (local) {
-      try { return migrateProject(local); } catch (err) { console.warn(err); }
-    }
+    if (local) { try { return migrateProject(local); } catch (err) { console.warn(err); } }
     if (isNative && Filesystem) {
-      try {
-        const res = await Filesystem.readFile({
-          path: 'planocasa-autosave.json',
-          directory: Directory.Data,
-          encoding: Encoding.UTF8,
-        });
-        const parsed = JSON.parse(res.data);
-        return migrateProject(parsed);
-      } catch {
-        // Sin archivo previo: se usa el proyecto vacío.
-      }
+      try { const res = await Filesystem.readFile({ path: 'planocasa-autosave.json', directory: Directory.Data, encoding: Encoding.UTF8 }); return migrateProject(JSON.parse(res.data)); } catch {}
     }
     return createProject();
   }
 
   async function exportProject() {
     const json = JSON.stringify(store.project, null, 2);
-    if (!isNative || !Filesystem || !Share) {
-      downloadText('planocasa.json', json);
-      return;
-    }
+    if (!isNative || !Filesystem || !Share) { downloadText('planocasa.json', json); return; }
     try {
-      await Filesystem.writeFile({
-        path: 'planocasa-export.json',
-        data: json,
-        directory: Directory.Cache,
-        encoding: Encoding.UTF8,
-      });
-      const { uri } = await Filesystem.getUri({
-        directory: Directory.Cache,
-        path: 'planocasa-export.json',
-      });
-      await Share.share({
-        title: 'PlanoCasa 3D',
-        text: 'Proyecto PlanoCasa 3D',
-        files: [uri],
-      });
-    } catch (err) {
-      console.error(err);
-      showToast('No se pudo exportar el proyecto', 'error');
-    }
+      await Filesystem.writeFile({ path: 'planocasa-export.json', data: json, directory: Directory.Cache, encoding: Encoding.UTF8 });
+      const { uri } = await Filesystem.getUri({ directory: Directory.Cache, path: 'planocasa-export.json' });
+      await Share.share({ title: 'PlanoCasa 3D', text: 'Proyecto PlanoCasa 3D', files: [uri] });
+    } catch (err) { console.error(err); showToast('No se pudo exportar el proyecto', 'error'); }
   }
 
   async function importProject() {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json,application/json';
+    const input = document.createElement('input'); input.type = 'file'; input.accept = '.json,application/json';
     input.addEventListener('change', async () => {
-      const file = input.files?.[0];
-      if (!file) return;
-      try {
-        const text = await file.text();
-        const parsed = JSON.parse(text);
-        const migrated = migrateProject(parsed);
-        store.replaceProject(migrated);
-        saveLocal(migrated);
-        showToast('Proyecto importado', 'ok');
-      } catch (err) {
-        console.error(err);
-        alertDialog('Archivo inválido', `No se pudo importar: ${err.message}`);
-      }
+      const file = input.files?.[0]; if (!file) return;
+      try { const text = await file.text(); const migrated = migrateProject(JSON.parse(text)); store.replaceProject(migrated); saveLocal(migrated); showToast('Proyecto importado', 'ok'); }
+      catch (err) { console.error(err); alertDialog('Archivo inválido', `No se pudo importar: ${err.message}`); }
     });
     input.click();
   }
 
   function downloadText(filename, text) {
-    const blob = new Blob([text], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
+    const blob = new Blob([text], { type: 'application/json' }); const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = filename; a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
   async function loadSample() {
     try {
       const res = await fetch('./assets/sample-house.json');
-      const parsed = await res.json();
-      const migrated = migrateProject(parsed);
-      store.replaceProject(migrated);
-      store.setActiveLevel('L1');
-      store.setPhase('SITE');
-      afterPhaseChange();
+      const migrated = migrateProject(await res.json());
+      store.replaceProject(migrated); store.setActiveLevel('L1'); store.setPhase('SITE'); afterPhaseChange();
       showToast('Casa de ejemplo cargada', 'ok');
-    } catch (err) {
-      console.error(err);
-      showToast('No se pudo cargar la casa de ejemplo', 'error');
-    }
+    } catch (err) { console.error(err); showToast('No se pudo cargar la casa de ejemplo', 'error'); }
   }
 
-  // ---------------- Ciclo de vida Android ----------------
   if (isNative && App) {
     App.addListener('backButton', () => {
       const dialog = document.getElementById('dialog-root');
@@ -435,43 +309,27 @@ async function bootstrap() {
       if (store.ui.phase !== 'SITE') { goToPhase(previousPhase(store.ui.phase)); return; }
       App.exitApp();
     });
-
     App.addListener('appStateChange', async ({ isActive }) => {
-      if (!isActive) {
-        await autosaver.flush(store.project);
-        viewer?.sm.stop();
-      } else if (store.ui.phase === 'VIEW_3D') {
-        viewer?.sm.start();
-      }
+      if (!isActive) { await autosaver.flush(store.project); viewer?.sm.stop(); }
+      else if (store.ui.phase === 'VIEW_3D') viewer?.sm.start();
     });
   }
 
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') {
-      autosaver.flush(store.project);
-      viewer?.sm.stop();
-    } else if (store.ui.phase === 'VIEW_3D') {
-      viewer?.sm.start();
-    }
+    if (document.visibilityState === 'hidden') { autosaver.flush(store.project); viewer?.sm.stop(); }
+    else if (store.ui.phase === 'VIEW_3D') viewer?.sm.start();
   });
 
-  // Inicio
   afterPhaseChange();
   updateUndoRedo();
-  if (!store.project.site?.lot) {
-    showToast('Empieza dibujando el lote en la fase Entorno');
-  }
+  if (!store.project.site?.lot) showToast('Empieza dibujando el lote en la fase Entorno');
 }
 
 bootstrap().catch((err) => {
   console.error(err);
   const hud = document.getElementById('canvas-hud');
   if (hud) {
-    hud.style.display = 'block';
-    hud.style.background = '#7f1d1d';
-    hud.style.color = '#fee2e2';
-    hud.style.fontSize = '14px';
-    hud.style.whiteSpace = 'normal';
-    hud.textContent = 'Error al arrancar: ' + err.message;
+    hud.style.display = 'block'; hud.style.background = '#7f1d1d'; hud.style.color = '#fee2e2'; hud.style.fontSize = '14px';
+    hud.style.whiteSpace = 'normal'; hud.textContent = 'Error al arrancar: ' + err.message;
   }
 });
