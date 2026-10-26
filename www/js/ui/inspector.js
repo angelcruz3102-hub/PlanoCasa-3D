@@ -1,9 +1,4 @@
 // === www/js/ui/inspector.js ===
-/**
- * Bottom-sheet de propiedades. En fase 3D muestra vistas rápidas y modos;
- * con selección edita nodo/abertura/etiqueta; sin selección muestra ajustes
- * y acciones de import/export.
- */
 import { STRINGS } from './strings.es.js';
 import { replaceLevel } from '../core/commands.js';
 import { confirmDialog } from './dialogs.js';
@@ -15,22 +10,23 @@ export class Inspector {
     this.store = store;
     this.callbacks = callbacks;
     this.render();
-    this.store.subscribe(
-      (p, u) => JSON.stringify(u.selection) + ':' + u.phase,
-      () => this.render(),
-    );
-    this.store.subscribe(
-      (p, u) => {
-        const lvl = p.levels.find((l) => l.id === u.activeLevelId);
-        return lvl ? lvl.rev : -1;
-      },
-      () => this.render(),
-    );
+    this.store.subscribe((p, u) => JSON.stringify(u.selection) + ':' + u.phase, () => this.render());
+    this.store.subscribe((p, u) => {
+      const lvl = p.levels.find((l) => l.id === u.activeLevelId);
+      return lvl ? lvl.rev : -1;
+    }, () => this.render());
   }
 
   render() {
     const { ui } = this.store;
     this.root.innerHTML = '';
+    
+    // Si no hay selección y no estamos en 3D, ocultar el panel.
+    if (ui.phase !== 'VIEW_3D' && !ui.selection) {
+      this.root.hidden = true;
+      return;
+    }
+
     this.root.hidden = false;
     if (ui.phase === 'VIEW_3D') {
       this.render3D();
@@ -40,7 +36,6 @@ export class Inspector {
       this.renderSelection(ui.selection);
       return;
     }
-    this.renderSettings();
   }
 
   render3D() {
@@ -153,59 +148,6 @@ export class Inspector {
         this.store.ui.selection = null;
       }
     });
-  }
-
-  renderSettings() {
-    const s = this.store.project.settings;
-    this.addTitle(STRINGS.inspector.settings);
-    this.addNumberRow(STRINGS.inspector.wallHeight, s.wallHeight, (v) => {
-      this.store.apply({
-        label: 'settings-wallHeight',
-        apply: (p) => { p.settings.wallHeight = v; },
-        revert: (p) => { p.settings.wallHeight = s.wallHeight; },
-      });
-    });
-    this.addNumberRow(STRINGS.inspector.slabThickness, s.slabThickness, (v) => {
-      this.store.apply({
-        label: 'settings-slab',
-        apply: (p) => { p.settings.slabThickness = v; },
-        revert: (p) => { p.settings.slabThickness = s.slabThickness; },
-      });
-    });
-    this.addNumberRow(STRINGS.inspector.exteriorThickness, s.wallThickness.exterior, (v) => {
-      this.store.apply({
-        label: 'settings-ext',
-        apply: (p) => { p.settings.wallThickness.exterior = v; },
-        revert: (p) => { p.settings.wallThickness.exterior = s.wallThickness.exterior; },
-      });
-    });
-    this.addNumberRow(STRINGS.inspector.interiorThickness, s.wallThickness.interior, (v) => {
-      this.store.apply({
-        label: 'settings-int',
-        apply: (p) => { p.settings.wallThickness.interior = v; },
-        revert: (p) => { p.settings.wallThickness.interior = s.wallThickness.interior; },
-      });
-    });
-
-    const actions = document.createElement('div');
-    actions.style.display = 'flex';
-    actions.style.flexWrap = 'wrap';
-    actions.style.gap = '8px';
-    actions.style.marginTop = '14px';
-    const buttons = [
-      [STRINGS.actions.loadSample, () => this.callbacks.onLoadSample?.()],
-      [STRINGS.actions.exportJson, () => this.callbacks.onExport?.()],
-      [STRINGS.actions.importJson, () => this.callbacks.onImport?.()],
-    ];
-    for (const [label, fn] of buttons) {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'button-secondary';
-      b.textContent = label;
-      b.addEventListener('click', fn);
-      actions.appendChild(b);
-    }
-    this.root.appendChild(actions);
   }
 
   addTitle(text) {
