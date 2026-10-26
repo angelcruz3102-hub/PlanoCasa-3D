@@ -1,0 +1,14 @@
+node_modules/
+www/vendor/
+dist/
+*.jks
+*.keystore
+*.b64
+android/local.properties
+.gradle/
+build/
+*.apk
+*.aab
+.idea/
+.DS_Store
+Thumbs.db
