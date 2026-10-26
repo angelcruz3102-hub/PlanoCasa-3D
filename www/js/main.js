@@ -159,15 +159,21 @@ async function bootstrap() {
     view.invalidate();
   }
 
-  function updatePhaseBanner() {
+    function updatePhaseBanner() {
     const banner = document.getElementById('phase-banner');
     const review = phasesNeedingReview(store.project);
-    if (review.length === 0) {
+    
+    const isEmpty = !store.project.site?.lot && Object.keys(store.project.levels[0]?.walls ?? {}).length === 0;
+    const currentIndex = PHASES.indexOf(store.ui.phase);
+    const relevant = review.filter(p => PHASES.indexOf(p) > currentIndex);
+
+    if (review.length === 0 || (isEmpty && store.ui.phase === 'SITE') || relevant.length === 0) {
       banner.hidden = true;
       return;
     }
+    
     banner.hidden = false;
-    banner.textContent = `Requiere revisión: ${review.join(', ')}`;
+    banner.textContent = `Requiere revisión: ${relevant.join(', ')}`;
   }
 
   function focusTarget(target) {
