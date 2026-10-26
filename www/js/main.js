@@ -1,13 +1,19 @@
 // === www/js/main.js ===
-/**
- * Arranque: persistencia, store, editor 2D, visor 3D, UI y ciclo de vida
- * Android. Es el único módulo que conoce Capacitor y el DOM global.
- */
 import * as THREE from 'three';
-import { Capacitor } from '@capacitor/core';
-import { App } from '@capacitor/app';
-import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
-import { Share } from '@capacitor/share';
+
+// El WebView nativo inyecta window.Capacitor.
+// En navegador (desarrollo) no existe, por lo que ofrecemos un mock vacío.
+const Capacitor = globalThis.Capacitor ?? {
+  isNativePlatform: () => false,
+  Plugins: {},
+};
+
+// Acceso a los plugins a través del bridge global.
+const App = Capacitor.Plugins?.App;
+const Filesystem = Capacitor.Plugins?.Filesystem;
+const Share = Capacitor.Plugins?.Share;
+const Directory = Filesystem?.Directory;
+const Encoding = Filesystem?.Encoding;
 
 import { Store } from './core/store.js';
 import { createProject, migrateProject, createLevel } from './core/schema.js';
@@ -39,7 +45,7 @@ import { PhaseStepper } from './ui/phase-stepper.js';
 import { Toolbar } from './ui/toolbar.js';
 import { LevelSwitcher } from './ui/level-switcher.js';
 import { Inspector } from './ui/inspector.js';
-import { showDialog, showErrors, alertDialog, closeDialog } from './ui/dialogs.js';
+import { showErrors, alertDialog, closeDialog } from './ui/dialogs.js';
 import { showToast } from './ui/toast.js';
 
 const isNative = Capacitor.isNativePlatform();
@@ -304,7 +310,7 @@ async function bootstrap() {
 
   // ---------------- Persistencia ----------------
   async function saveProjectFile(project) {
-    if (!isNative) return;
+    if (!isNative || !Filesystem) return;
     try {
       await Filesystem.writeFile({
         path: 'planocasa-autosave.json',
@@ -322,7 +328,7 @@ async function bootstrap() {
     if (local) {
       try { return migrateProject(local); } catch (err) { console.warn(err); }
     }
-    if (isNative) {
+    if (isNative && Filesystem) {
       try {
         const res = await Filesystem.readFile({
           path: 'planocasa-autosave.json',
@@ -340,7 +346,7 @@ async function bootstrap() {
 
   async function exportProject() {
     const json = JSON.stringify(store.project, null, 2);
-    if (!isNative) {
+    if (!isNative || !Filesystem || !Share) {
       downloadText('planocasa.json', json);
       return;
     }
@@ -415,7 +421,7 @@ async function bootstrap() {
   }
 
   // ---------------- Ciclo de vida Android ----------------
-  if (isNative) {
+  if (isNative && App) {
     App.addListener('backButton', () => {
       const dialog = document.getElementById('dialog-root');
       if (dialog && !dialog.hidden) { closeDialog(); return; }
@@ -454,5 +460,12 @@ async function bootstrap() {
 bootstrap().catch((err) => {
   console.error(err);
   const hud = document.getElementById('canvas-hud');
-  if (hud) hud.textContent = 'Error al arrancar. Ejecuta "npm run vendor" antes de abrir la app.';
+  if (hud) {
+    hud.style.display = 'block';
+    hud.style.background = '#7f1d1d';
+    hud.style.color = '#fee2e2';
+    hud.style.fontSize = '14px';
+    hud.style.whiteSpace = 'normal';
+    hud.textContent = 'Error al arrancar: ' + err.message;
+  }
 });
