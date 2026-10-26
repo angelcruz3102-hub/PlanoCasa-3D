@@ -52,4 +52,57 @@
         "d1":   { "id": "d1",   "wallId": "w4b", "type": "door",   "s": 2, "width": 0.9, "height": 2.1, "sill": 0,   "hinge": "left", "swing": "in" },
         "win1": { "id": "win1", "wallId": "w1",  "type": "window", "s": 5, "width": 1.2, "height": 1.2, "sill": 0.9, "hinge": "left", "swing": "in" }
       },
-     
+      "labels": [
+        { "id": "lab1", "x": 10, "y": 13, "type": "sala",   "name": "Sala" },
+        { "id": "lab2", "x": 10, "y": 17, "type": "cocina", "name": "Cocina" }
+      ],
+      "perimeterLoop": ["n1", "n2", "n3", "n4"]
+    },
+    {
+      "id": "L2", "index": 1, "name": "Segunda planta", "rev": 0,
+      "nodes": {
+        "m1": { "id": "m1", "x": 5,  "y": 11 },
+        "m2": { "id": "m2", "x": 15, "y": 11 },
+        "m3": { "id": "m3", "x": 15, "y": 19 },
+        "m4": { "id": "m4", "x": 5,  "y": 19 },
+        "m5": { "id": "m5", "x": 5,  "y": 15 },
+        "m6": { "id": "m6", "x": 15, "y": 15 },
+        "m7": { "id": "m7", "x": 10, "y": 11 },
+        "m8": { "id": "m8", "x": 10, "y": 15 }
+      },
+      "walls": {
+        "x1a": { "id": "x1a", "a": "m1", "b": "m7", "kind": "exterior", "thickness": 0.2,  "height": 2.7 },
+        "x1b": { "id": "x1b", "a": "m7", "b": "m2", "kind": "exterior", "thickness": 0.2,  "height": 2.7 },
+        "x2a": { "id": "x2a", "a": "m2", "b": "m6", "kind": "exterior", "thickness": 0.2,  "height": 2.7 },
+        "x2b": { "id": "x2b", "a": "m6", "b": "m3", "kind": "exterior", "thickness": 0.2,  "height": 2.7 },
+        "x3":  { "id": "x3",  "a": "m3", "b": "m4", "kind": "exterior", "thickness": 0.2,  "height": 2.7 },
+        "x4a": { "id": "x4a", "a": "m4", "b": "m5", "kind": "exterior", "thickness": 0.2,  "height": 2.7 },
+        "x4b": { "id": "x4b", "a": "m5", "b": "m1", "kind": "exterior", "thickness": 0.2,  "height": 2.7 },
+        "x5a": { "id": "x5a", "a": "m5", "b": "m8", "kind": "interior", "thickness": 0.12, "height": 2.7 },
+        "x5b": { "id": "x5b", "a": "m8", "b": "m6", "kind": "interior", "thickness": 0.12, "height": 2.7 },
+        "x6":  { "id": "x6",  "a": "m7", "b": "m8", "kind": "interior", "thickness": 0.12, "height": 2.7 }
+      },
+      "openings": {
+        "dx1": { "id": "dx1", "wallId": "x4a", "type": "door", "s": 3, "width": 0.9, "height": 2.1, "sill": 0, "hinge": "left", "swing": "in" }
+      },
+      "labels": [
+        { "id": "lx1", "x": 7.5,  "y": 13, "type": "habitacion", "name": "Dormitorio" },
+        { "id": "lx2", "x": 12.5, "y": 13, "type": "bano",       "name": "Baño" },
+        { "id": "lx3", "x": 10,   "y": 17, "type": "pasillo",    "name": "Pasillo" }
+      ],
+      "perimeterLoop": ["m1", "m7", "m2", "m6", "m3", "m4", "m5"]
+    }
+  ],
+  "stairs": [
+    {
+      "id": "st1", "fromLevelId": "L1", "toLevelId": "L2",
+      "kind": "straight", "x": 10, "y": 17, "angleDeg": 0,
+      "width": 0.9, "tread": 0.25, "targetRiser": 0.18,
+      "turn": "left", "landing": 0.9, "style": "solid",
+      "holePolygon": [
+        { "x": 8, "y": 16.55 }, { "x": 12, "y": 16.55 },
+        { "x": 12, "y": 17.45 }, { "x": 8, "y": 17.45 }
+      ]
+    }
+  ]
+}
