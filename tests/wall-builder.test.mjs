@@ -26,10 +26,9 @@ test('dintel y antepecho generan prismas', () => {
   const { builder } = buildWalls(project, level, 0);
   const geo = builder.build(fakeThree());
   assert.ok(geo.position.array.length > 0);
-  // Con una ventana en un muro recto hay 4 prismas: tramo macizo antes,
-  // antepecho (0→0.9), dintel (2.1→2.7), tramo macizo después.
-  // El relleno de la ventana va a openingsBuilder, no al builder principal.
-  // 4 prismas × 24 vértices × 3 floats = 288 floats en position.
-  const prismCount = geo.position.array.length / (24 * 3);
+  // Cada prisma cerrado tiene 6 caras × 2 triángulos × 3 vértices = 36 vértices.
+  // Un muro con una ventana genera 4 prismas: tramo macizo, antepecho, dintel, tramo macizo.
+  const VERTEX_FLOATS = 36 * 3;
+  const prismCount = geo.position.array.length / VERTEX_FLOATS;
   assert.equal(prismCount, 4, `prismas=${prismCount}, esperado 4`);
 });
