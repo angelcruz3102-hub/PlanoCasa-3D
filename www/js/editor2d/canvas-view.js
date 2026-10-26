@@ -1,9 +1,4 @@
 // === www/js/editor2d/canvas-view.js ===
-/**
- * Transformación mundo↔pantalla con zoom/pan, manejo de devicePixelRatio y
- * redibujo con requestAnimationFrame solo cuando se invalida. Es la única
- * pieza que conoce el mapeo entre metros y píxeles CSS.
- */
 export class CanvasView {
   #canvas;
   #ctx;
@@ -15,7 +10,7 @@ export class CanvasView {
   constructor(canvas) {
     this.#canvas = canvas;
     this.#ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
-    this.scale = 50;   // px por metro
+    this.scale = 50;
     this.panX = 0;
     this.panY = 0;
     this.width = 0;
@@ -23,6 +18,8 @@ export class CanvasView {
     this.#ro = new ResizeObserver(() => this.resize());
     this.#ro.observe(canvas.parentElement ?? canvas);
     this.resize();
+    // Forzar un redimensionamiento tras el primer frame de layout
+    requestAnimationFrame(() => this.resize());
   }
 
   worldToScreen(p) {
@@ -74,6 +71,8 @@ export class CanvasView {
 
   resize() {
     const rect = this.#canvas.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+    
     this.width = rect.width;
     this.height = rect.height;
     this.#dpr = window.devicePixelRatio || 1;
@@ -84,7 +83,6 @@ export class CanvasView {
   }
 
   get ctx() { return this.#ctx; }
-
   destroy() { this.#ro.disconnect(); }
 }
 
