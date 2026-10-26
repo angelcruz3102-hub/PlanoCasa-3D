@@ -18,7 +18,6 @@ export class CanvasView {
     this.#ro = new ResizeObserver(() => this.resize());
     this.#ro.observe(canvas.parentElement ?? canvas);
     this.resize();
-    // Forzar un redimensionamiento tras el primer frame de layout
     requestAnimationFrame(() => this.resize());
   }
 
@@ -32,7 +31,7 @@ export class CanvasView {
 
   zoomAt(screenPt, factor) {
     const before = this.screenToWorld(screenPt);
-    this.scale = clamp(this.scale * factor, 5, 400);
+    this.scale = Math.max(5, Math.min(this.scale * factor, 400));
     this.panX = screenPt.x - before.x * this.scale;
     this.panY = screenPt.y - before.y * this.scale;
     this.invalidate();
@@ -48,8 +47,7 @@ export class CanvasView {
     if (w <= 0 || h <= 0) return;
     const availableW = Math.max(1, this.width - padding * 2);
     const availableH = Math.max(1, this.height - padding * 2);
-    this.scale = Math.min(availableW / w, availableH / h);
-    this.scale = clamp(this.scale, 5, 400);
+    this.scale = Math.max(5, Math.min(availableW / w, availableH / h, 400));
     this.panX = this.width / 2 - (x + w / 2) * this.scale;
     this.panY = this.height / 2 - (y + h / 2) * this.scale;
     this.invalidate();
@@ -65,14 +63,15 @@ export class CanvasView {
     this.#rafPending = true;
     requestAnimationFrame(() => {
       this.#rafPending = false;
-      if (this.#onRender) this.#onRender(this.#ctx, this);
+      if (this.#onRender) {
+        try { this.#onRender(this.#ctx, this); } catch (e) { console.error(e); }
+      }
     });
   }
 
   resize() {
     const rect = this.#canvas.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) return;
-    
     this.width = rect.width;
     this.height = rect.height;
     this.#dpr = window.devicePixelRatio || 1;
@@ -84,8 +83,4 @@ export class CanvasView {
 
   get ctx() { return this.#ctx; }
   destroy() { this.#ro.disconnect(); }
-}
-
-function clamp(v, lo, hi) {
-  return Math.max(lo, Math.min(hi, v));
 }
