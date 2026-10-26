@@ -1,4 +1,3 @@
-// === tests/polygon.test.mjs ===
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { area2, area, ensureCounterClockwise, pointInPolygon, polygonSelfIntersects, isSimplePolygon } from '../www/js/geometry/polygon.js';
