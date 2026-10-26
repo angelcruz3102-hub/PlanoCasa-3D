@@ -1,4 +1,3 @@
-// === tests/wall-builder.test.mjs ===
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { buildWalls, levelElevation } from '../www/js/geometry/wall-builder.js';
@@ -27,5 +26,10 @@ test('dintel y antepecho generan prismas', () => {
   const { builder } = buildWalls(project, level, 0);
   const geo = builder.build(fakeThree());
   assert.ok(geo.position.array.length > 0);
-  assert.equal(geo.position.array.length / 3, 24 * 5);
+  // Con una ventana en un muro recto hay 4 prismas: tramo macizo antes,
+  // antepecho (0→0.9), dintel (2.1→2.7), tramo macizo después.
+  // El relleno de la ventana va a openingsBuilder, no al builder principal.
+  // 4 prismas × 24 vértices × 3 floats = 288 floats en position.
+  const prismCount = geo.position.array.length / (24 * 3);
+  assert.equal(prismCount, 4, `prismas=${prismCount}, esperado 4`);
 });
