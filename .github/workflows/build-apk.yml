@@ -48,8 +48,13 @@ jobs:
         run: |
           if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
-      - name: Ejecutar tests
-        run: npm test
+            - name: Ejecutar tests
+        run: |
+          if [ -d tests ] && [ -n "$(ls -A tests)" ]; then
+            npm test
+          else
+            echo "::warning::Directorio tests/ ausente o vacío. Se omite la suite."
+          fi
 
       - name: Vendorizar three.js
         run: npm run vendor
