@@ -1,0 +1,151 @@
+# === .github/workflows/build-apk.yml ===
+name: Build Android APK
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'release (firmado, requiere secretos) o debug'
+        type: choice
+        options: [release, debug]
+        default: release
+
+concurrency:
+  group: build-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+env:
+  NODE_VERSION: '22'
+  JAVA_VERSION: '21'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: ${{ hashFiles('package-lock.json') != '' && 'npm' || '' }}
+
+      - name: Instalar dependencias
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
+
+      - name: Ejecutar tests
+        run: npm test
+
+      - name: Vendorizar three.js
+        run: npm run vendor
+
+      - name: Generar proyecto Android si no está versionado
+        run: |
+          if [ ! -d android ]; then npx cap add android; else echo "android/ ya existe"; fi
+
+      - name: Ajustar versionCode y versionName
+        run: node scripts/prepare-android.mjs
+        env:
+          VERSION_CODE: ${{ github.run_number }}
+
+      - name: Sincronizar web hacia Android
+        run: npx cap sync android
+
+      - name: Configurar JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: gradle
+
+      - name: Preparar Android SDK
+        run: |
+          if [ -z "$ANDROID_HOME" ]; then
+            echo "::error::ANDROID_HOME está vacío."
+            exit 1
+          fi
+          SDK="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          [ -x "$SDK" ] || { echo "::error::sdkmanager no encontrado"; exit 1; }
+          yes | "$SDK" --licenses >/dev/null || true
+          "$SDK" "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Decidir modo de build
+        run: |
+          MODE=debug
+          if [ -n "$KEYSTORE_B64" ] \
+            && [ "${{ github.event_name }}" != "pull_request" ] \
+            && [ "${{ inputs.build_type }}" != "debug" ]; then
+            MODE=release
+          fi
+          echo "BUILD_MODE=$MODE" >> "$GITHUB_ENV"
+          echo "Modo de build: $MODE"
+
+      - name: Compilar APK debug
+        if: env.BUILD_MODE == 'debug'
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon assembleDebug
+
+      - name: Compilar APK release sin firmar
+        if: env.BUILD_MODE == 'release'
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon assembleRelease
+
+      - name: Recoger y firmar APK
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          if [ "$BUILD_MODE" = "debug" ]; then
+            cp android/app/build/outputs/apk/debug/app-debug.apk \
+               "dist/planocasa-${GITHUB_RUN_NUMBER}-debug.apk"
+            exit 0
+          fi
+          KEYSTORE_PATH="$RUNNER_TEMP/release-keystore.jks"
+          trap 'rm -f "$KEYSTORE_PATH"' EXIT
+          printf '%s' "$KEYSTORE_B64" | base64 --decode > "$KEYSTORE_PATH"
+          BT_DIR="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -n1)"
+          UNSIGNED="$(ls android/app/build/outputs/apk/release/*-unsigned.apk | head -n1)"
+          ALIGNED="$RUNNER_TEMP/aligned.apk"
+          OUT="dist/planocasa-${GITHUB_RUN_NUMBER}-release.apk"
+          "$BT_DIR/zipalign" -p -f 4 "$UNSIGNED" "$ALIGNED"
+          "$BT_DIR/apksigner" sign \
+            --ks "$KEYSTORE_PATH" --ks-key-alias "$KEY_ALIAS" \
+            --ks-pass env:KEYSTORE_PASSWORD --key-pass env:KEY_PASSWORD \
+            --out "$OUT" "$ALIGNED"
+          "$BT_DIR/apksigner" verify --verbose --print-certs "$OUT"
+
+      - name: Resumen con SHA-256
+        run: |
+          { echo '### APK generado'; echo; echo '```'; sha256sum dist/*.apk; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Subir artefacto
+        uses: actions/upload-artifact@v7
+        with:
+          name: planocasa-apk-${{ github.run_number }}
+          path: dist/*.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publicar GitHub Release (solo tags v* firmados)
+        if: startsWith(github.ref, 'refs/tags/v') && env.BUILD_MODE == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/*.apk --title "$GITHUB_REF_NAME" --generate-notes
