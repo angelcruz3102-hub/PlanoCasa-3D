@@ -1,4 +1,3 @@
-// === tests/stair-builder.test.mjs ===
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { computeStairMetrics, stairHolePolygon } from '../www/js/geometry/stair-builder.js';
