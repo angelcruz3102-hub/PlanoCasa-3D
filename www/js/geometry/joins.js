@@ -31,9 +31,15 @@ export function computeWallFootprints(graph) {
     const dir = norm(sub(b, a));
     const len = Math.hypot(b.x - a.x, b.y - a.y);
     const h = wall.thickness / 2;
+    const startRaw = endpointsAtNode(graph, wall, a, b, dir, h);
+    const endRaw = endpointsAtNode(graph, wall, b, a, mul(dir, -1), h);
+    // `dirOut` en el extremo apunta de vuelta hacia `a`, por lo que
+    // leftNormal(dirOut) = -leftNormal(dir). Para que "left" signifique el
+    // mismo lado físico del muro a lo largo de toda su longitud, se
+    // intercambian left/right en el extremo.
     result[wall.id] = {
-      start: endpointsAtNode(graph, wall, a, b, dir, h),
-      end: endpointsAtNode(graph, wall, b, a, mul(dir, -1), h),
+      start: startRaw,
+      end: { left: endRaw.right, right: endRaw.left },
       axis: { origin: { ...a }, dir, length: len },
     };
   }
