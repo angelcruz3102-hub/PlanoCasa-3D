@@ -74,12 +74,13 @@ export class Renderer2D {
     return entry;
   }
 
-  #drawGrid(ctx, view, step) {
+    #drawGrid(ctx, view, step) {
     const x0 = Math.floor(view.screenToWorld({ x: 0, y: 0 }).x / step) * step;
     const y0 = Math.floor(view.screenToWorld({ x: 0, y: 0 }).y / step) * step;
     const x1 = view.screenToWorld({ x: view.width, y: view.height }).x;
     const y1 = view.screenToWorld({ x: view.width, y: view.height }).y;
-    ctx.strokeStyle = 'rgba(148,163,184,0.10)';
+    // Aumentado de 0.10 a 0.25 para mejor visibilidad
+    ctx.strokeStyle = 'rgba(148,163,184,0.25)';
     ctx.lineWidth = 1 / view.scale;
     ctx.beginPath();
     for (let x = x0; x <= x1 + step; x += step) {
