@@ -1,0 +1,45 @@
+<!-- === www/index.html === -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#0f172a">
+  <title>PlanoCasa 3D</title>
+  <link rel="stylesheet" href="./css/base.css">
+  <link rel="stylesheet" href="./css/layout.css">
+  <link rel="stylesheet" href="./css/components.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "./vendor/three/three.module.js",
+        "three/addons/": "./vendor/three/addons/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="app-shell">
+    <header id="top-bar" class="top-bar">
+      <div id="phase-stepper" class="phase-stepper" aria-label="Fases del proyecto"></div>
+      <div class="top-bar-actions">
+        <div id="level-switcher" class="level-switcher" aria-label="Nivel activo"></div>
+        <button id="btn-undo" class="icon-button" type="button" aria-label="Deshacer" disabled>↶</button>
+        <button id="btn-redo" class="icon-button" type="button" aria-label="Rehacer" disabled>↷</button>
+        <button id="btn-snaps" class="icon-button" type="button" aria-label="Ajustes" aria-pressed="true">⌗</button>
+      </div>
+    </header>
+    <main id="viewport" class="viewport">
+      <canvas id="canvas-2d" class="canvas-2d" aria-label="Editor de planos 2D"></canvas>
+      <div id="viewer-3d" class="viewer-3d" aria-hidden="true"></div>
+      <div id="canvas-hud" class="canvas-hud" aria-live="polite"></div>
+      <div id="phase-banner" class="phase-banner" hidden></div>
+    </main>
+    <nav id="toolbar" class="toolbar" aria-label="Herramientas"></nav>
+    <aside id="inspector" class="inspector" hidden></aside>
+    <div id="dialog-root" class="dialog-root" hidden></div>
+    <div id="toast-root" class="toast-root" aria-live="assertive"></div>
+  </div>
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>
