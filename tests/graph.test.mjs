@@ -1,4 +1,3 @@
-// === tests/graph.test.mjs ===
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { insertWall, nodeDegree } from '../www/js/geometry/graph.js';
