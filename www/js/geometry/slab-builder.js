@@ -67,9 +67,14 @@ export function buildSlab(level, y0, y1, holes = []) {
 
 function outerRingFromJoins(level, footprints, loop) {
   const pts = [];
+  const loopSet = new Set(loop.map((n) => n.id));
   for (const node of loop) {
+    // Solo considerar muros cuyos DOS extremos estén en el loop; esto
+    // excluye muros interiores que se apoyan en el perímetro por un solo
+    // extremo (T-junctions) y evita que sus ingletes contaminen el anillo.
     const walls = Object.values(level.walls).filter(
-      (w) => w.a === node.id || w.b === node.id,
+      (w) => loopSet.has(w.a) && loopSet.has(w.b)
+        && (w.a === node.id || w.b === node.id),
     );
     const fp = walls.map((w) => footprints[w.id]).find(Boolean);
     if (fp) pts.push(fp.start.left, fp.end.left, fp.end.right, fp.start.right);
